@@ -26,7 +26,7 @@ These are the command line arguments you can use:
   * This determines whether you train for the binary classifier or the fine-grain classifier
 * --epochs [int] (default is 25)
   * This determines the number of epochs the model will train for
-* --num_heads [int] (default is 2)
+* --num_heads [int] (default is 1)
   * This determines the number of heads per layer (we used twice the amount for a traditional transformer compared to a differential one)
 * --hidden_size [int] (default is 100)
   * This determines the hidden size of the FFNN in the transformer
@@ -45,12 +45,12 @@ These are the command line arguments you can use:
 
 ### Recommended commands to run for classification to fully train (Remember to enter Classification directory first):
 * Differential/Binary:
-  * `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1 --run_on_test`
+  * `python classification.py --model DIFFERENTIAL --task BINARY --run_on_test`
 * Differential/Multi-class:
-  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --num_heads 1 --epochs 40 --run_on_test`
+  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --epochs 40 --run_on_test`
 * Traditional/Binary:
-  * `python classification.py --model TRADITIONAL --task BINARY --run_on_test`
+  * `python classification.py --model TRADITIONAL --task BINARY --num_heads 2 --run_on_test`
 * Traditional/Multi-class:
-  * `python classification.py --model TRADITIONAL --task MULTICLASS --epochs 40 --run_on_test`
+  * `python classification.py --model TRADITIONAL --task MULTICLASS --num_heads 2 --epochs 40 --run_on_test`
 
 Epochs take a long time to run, so if you want to quickly see a plot you can just use `--epochs 2` to see the end result, although it won't be fully trained

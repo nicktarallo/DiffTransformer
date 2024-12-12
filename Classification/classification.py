@@ -18,9 +18,6 @@ from sklearn.exceptions import UndefinedMetricWarning
 # Ignore only UndefinedMetricWarning
 warnings.filterwarnings('ignore', category=UndefinedMetricWarning)
 
-# max_seq_length = 268  # This is the context length of the transformer
-max_seq_length = 290
-
 
 def _parse_args():
     """
@@ -31,7 +28,7 @@ def _parse_args():
     parser.add_argument('--model', type=str, default='DIFFERENTIAL', help='model to run (DIFFERENTIAL or TRADITIONAL)')
     parser.add_argument('--task', type=str, default='BINARY', help='classification task to run (BINARY OR MULTICLASS')
     parser.add_argument('--epochs', type=int, default=30, help='number of epochs to run')
-    parser.add_argument('--num_heads', type=int, default=2, help='number of heads to use')
+    parser.add_argument('--num_heads', type=int, default=1, help='number of heads to use')
     parser.add_argument('--hidden_size', type=int, default=100, help='hidden size of feedforward layer')
     parser.add_argument('--transformer_layers', type=int, default=1, help='layers in the transformer')
     parser.add_argument('--d_model', type=int, default=32, help='embedding size')
@@ -89,10 +86,10 @@ def train_classifier(
 
     # Create the correct transformer type:
     if model_type == 'TRADITIONAL':
-        model = TransformerEncoder(len(indexer), max_seq_length, d_model, d_internal, num_classes, transformer_layers,
+        model = TransformerEncoder(len(indexer), 268, d_model, d_internal, num_classes, transformer_layers,
                                    num_heads, hidden_size).to(device)
     elif model_type == 'DIFFERENTIAL':
-        model = DiffTransformerEncoder(len(indexer), max_seq_length, d_model, d_internal, num_classes, transformer_layers,
+        model = DiffTransformerEncoder(len(indexer), 268, d_model, d_internal, num_classes, transformer_layers,
                                        num_heads, hidden_size).to(device)
     else:
         raise Exception("Model must be one of TRADITIONAL or DIFFERENTIAL")
