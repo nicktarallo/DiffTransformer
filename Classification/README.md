@@ -29,7 +29,7 @@ The basic way to run the program is with
 ```bash
 python classification.py
 ```
-which will train a single head, differential transformer on binary classification
+which will train a single head, differential transformer on binary classification for 25 epochs.
 
 These are the command line arguments you can use:
 * __--model DIFFERENTIAL__ or __--model TRADITIONAL__ (default is DIFFERENTIAL)
