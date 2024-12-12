@@ -1,7 +1,7 @@
 
 # Differential Transformer for Machine Translation
 
-This repository implements a differential transformer architecture for machine translation tasks. The model introduces custom attention mechanisms and follows the standard encoder-decoder framework. It is inspired by the Transformer architecture with additional innovations to enhance performance.
+This directory implements a differential transformer architecture for machine translation tasks. The model introduces custom attention mechanisms and follows the standard encoder-decoder framework. It is inspired by the Differential Amplifier to supprese Noise. 
 
 ## Features
 
