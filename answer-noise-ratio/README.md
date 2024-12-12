@@ -1,4 +1,4 @@
-# Normalized attention score analysis: Traditional Decoder and Differential Decoder
+# Attention score analysis: Traditional Decoder and Differential Decoder
 
 This repository contains Python code to train and compare two transformer models:
 1. **Traditional Decoder-Only Transformer**
@@ -16,13 +16,21 @@ The **Traditional Decoder-Only Transformer** and **Differential Decoder Transfor
 
 The model setup code initializes the models and defines layers for attention, feedforward networks, and output heads. The models are trained on the **wikitext** dataset.
 
-## Installation
+## Installation and running
 
 To run this code, you need Python 3.x and the following dependencies:
 
 ```bash
+cd answer-noise-ratio
 pip install torch datasets transformers matplotlib tqdm
+
+# for running the differntial attention decoder transformer
+python decoder_differential_attention.py
+
+# for running the standard decoder transformer
+python decoder_standard_attention.py
 ```
+
 
 
 ## Model training and validation
