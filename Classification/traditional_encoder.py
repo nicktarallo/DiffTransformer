@@ -4,7 +4,7 @@ from utils import PositionalEncoding
 from typing import Tuple, List
 import torch.nn as nn
 
-class Transformer(nn.Module):
+class TransformerEncoder(nn.Module):
     """
     This class defines a regular transformer encoder model intended for classification with traditional self-attention.
     The classification is done by pooling the final hidden states and then projecting to the number of classes

@@ -9,7 +9,7 @@ from utils import *
 import matplotlib.pyplot as plt
 import pandas as pd
 import math
-from traditional_encoder import Transformer
+from traditional_encoder import TransformerEncoder
 from typing import List, Tuple
 
 
@@ -23,7 +23,7 @@ def lambda_init_fn(depth: int) -> float:
     return 0.8 - 0.6 * math.exp(-0.3 * depth)
 
 
-class DiffTransformer(Transformer):
+class DiffTransformerEncoder(TransformerEncoder):
     """
     A differential transformer is the same as a traditional one, but with Differential layers/attention instead.
     Therefore, we can take the same architecture through inheritance and replace the layers with DiffTransformerLayer instead.

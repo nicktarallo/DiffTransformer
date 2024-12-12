@@ -5,13 +5,18 @@ import torch
 import random
 from utils import *
 from sklearn.metrics import f1_score, precision_score, recall_score
-from traditional_encoder import Transformer
-from differential_encoder import DiffTransformer
+from traditional_encoder import TransformerEncoder
+from differential_encoder import DiffTransformerEncoder
 import torch.nn as nn
 from torch import optim
 import matplotlib.pyplot as plt
 import pandas as pd
 from typing import List, Tuple
+import warnings
+from sklearn.exceptions import UndefinedMetricWarning
+
+# Ignore only UndefinedMetricWarning
+warnings.filterwarnings('ignore', category=UndefinedMetricWarning)
 
 # max_seq_length = 268  # This is the context length of the transformer
 max_seq_length = 290
@@ -78,14 +83,19 @@ def train_classifier(
     elif task == 'MULTICLASS':
         num_classes = 5
         f1_metrics = ['macro', 'weighted']  # For multiclass, use macro and weighted F1
+    else:
+        raise Exception("Task must be one of BINARY or MULTICLASS")
+
 
     # Create the correct transformer type:
     if model_type == 'TRADITIONAL':
-        model = Transformer(len(indexer), max_seq_length, d_model, d_internal, num_classes, transformer_layers,
-                            num_heads, hidden_size).to(device)
+        model = TransformerEncoder(len(indexer), max_seq_length, d_model, d_internal, num_classes, transformer_layers,
+                                   num_heads, hidden_size).to(device)
     elif model_type == 'DIFFERENTIAL':
-        model = DiffTransformer(len(indexer), max_seq_length, d_model, d_internal, num_classes, transformer_layers,
-                                num_heads, hidden_size).to(device)
+        model = DiffTransformerEncoder(len(indexer), max_seq_length, d_model, d_internal, num_classes, transformer_layers,
+                                       num_heads, hidden_size).to(device)
+    else:
+        raise Exception("Model must be one of TRADITIONAL or DIFFERENTIAL")
 
     # Adam optimizer with NLLLoss
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
@@ -161,7 +171,7 @@ def train_classifier(
         plt.plot(epochs, lst, color='b', label=f'{metric.capitalize()} F1 Score')
         plt.xlabel('Epochs')
         plt.ylabel('F1')
-        plt.title('Model Validation F1 per Epoch')
+        plt.title(f'Model Validation {metric.capitalize()} F1 per Epoch')
         plt.legend()
         plt.grid(True)
         plt.show()
@@ -258,17 +268,22 @@ def main():
     args = _parse_args()
     if args.task == 'BINARY':
         ds = load_dataset("stanfordnlp/sst2")  # Use the binary SST set
-        # This dataset has the test labels unhidden, so we use it for the test dataset
+
+        # The SetFit/sst2 dataset has the test labels unhidden, so we use it for the test dataset
         # It has almost all the same test examples, and the ones that don't match do not overlap
-        # with the train or development set that we use
-        # The larger one from stanfordnlp has the test labels hidden
+        # with the train or development set that we use, so we are accidentally evaluating on training data.
+        # The larger train set from stanfordnlp that we use for train/validation has the test labels hidden, so it can't be used for test evaluation
+        # This was cleared with the professor.
         ds_test = load_dataset("SetFit/sst2").rename_column('text', 'sentence')
         f1_metrics = ['binary']  # F1 averaging strategy - binary means don't average, use class 1
     elif args.task == 'MULTICLASS':
         ds = ds_test = load_dataset('SetFit/sst5').rename_column('text', 'sentence')  # Use the 5-class SST set
         f1_metrics = ['macro', 'weighted']  # Multiclass F1 averaging strategy
+    else:
+        raise Exception("Task must be one of BINARY or MULTICLASS")
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    print('Using device:', device)
 
     train_dataset = ds['train']
     validation_dataset = ds["validation"]
@@ -308,6 +323,7 @@ def main():
     torch.save(model, f'models/{args.model}_{args.task}_{args.num_heads}head_model.pt')
 
     # Print results on validation set
+    print()
     print('Validation Results:')
     do_final_evaluation(model, validation_exs, f1_metrics)
 
@@ -323,6 +339,7 @@ def main():
 
 
 if __name__ == '__main__':
+    # Random seed for replicability:
     torch.manual_seed(42)
     torch.cuda.manual_seed(42)
     np.random.seed(42)

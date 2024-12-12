@@ -1,5 +1,3 @@
-# CS 6120 Project - Differential Transformers
-In this project, we explore the proposed differential transformer and compare it to standard transformers.
 ## Sentiment Classification
 Classification uses an encoder model for two different tasks
 * Binary classification - SST-2 dataset: https://huggingface.co/datasets/stanfordnlp/sst2
@@ -7,6 +5,13 @@ Classification uses an encoder model for two different tasks
 * Multi-class (fine-grained) classification - SST-5 dataset: https://huggingface.co/datasets/SetFit/sst5
 
 To run the classification task, you can run the classification.py file to train a model.
+Prior to running the command, be sure to be in the Classification directory. If you are not, do
+
+```bash
+cd Classification
+```
+
+within the larger project directory.
 
 When running, it will train a model and make plots of relevant accuracy and F1 metrics at the end.
 At the end of training, a csv with relevant training/development metrics will be saved to /df_outputs that can be used to do more advanced plotting and analysis.
@@ -38,7 +43,7 @@ These are the command line arguments you can use:
 * --get_attention_maps (default is False)
   * Use this flag with no arguments when you want to save example attention maps to the /maps folder
 
-### Recommended commands to run for classification to fully train:
+### Recommended commands to run for classification to fully train (Remember to enter Classification directory first):
 * Differential/Binary:
   * `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1 --run_on_test`
 * Differential/Multi-class:
