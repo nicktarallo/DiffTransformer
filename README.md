@@ -38,12 +38,12 @@ These are the command line arguments you can use:
 
 ### Recommended commands to run for classification to fully train:
 * Differential/Binary:
-  * `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1`
+  * `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1 --run_on_test`
 * Differential/Multi-class:
-  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --num_heads 1 --epochs 40`
+  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --num_heads 1 --epochs 40 --run_on_test`
 * Traditional/Binary:
-  * `python classification.py --model TRADITIONAL --task BINARY`
+  * `python classification.py --model TRADITIONAL --task BINARY --run_on_test`
 * Traditional/Multi-class:
-  * `python classification.py --model TRADITIONAL --task MULTICLASS --epochs 40`
+  * `python classification.py --model TRADITIONAL --task MULTICLASS --epochs 40 --run_on_test`
 
 Epochs take a long time to run, so if you want to quickly see a plot you can just use `--epochs 2` to see the end result, although it won't be fully trained
