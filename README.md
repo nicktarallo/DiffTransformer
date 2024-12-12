@@ -36,7 +36,7 @@ These are the command line arguments you can use:
 * --get_attention_maps (default is False)
   * Use this flag with no arguments when you want to save example attention maps to the /maps folder
 
-### Recommended commands to run for classification:
+### Recommended commands to run for classification to fully train:
 * Differential/Binary:
   * `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1`
 * Differential/Multi-class:
