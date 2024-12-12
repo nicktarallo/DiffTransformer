@@ -12,6 +12,8 @@ When running, it will train a model and make plots of relevant accuracy and F1 m
 At the end of training, a csv with relevant training/development metrics will be saved to /df_outputs that can be used to do more advanced plotting and analysis.
 Also at the end of training, the trained model will be saved to /models.
 
+Libraries required: numpy, pandas, matplotlib, datasets, torch
+
 These are the command line arguments you can use:
 * --model DIFFERENTIAL or --model TRADITIONAL (default is DIFFERENTIAL)
   * This determines whether you train a differential or traditional transformer
