@@ -210,7 +210,7 @@ def do_final_evaluation(model: nn.Module, exs: List[SentimentExample], f1_metric
     # Print precision, recall, and F1 for all desired averaging metrics:
     for metric in f1_metrics:
         precision = precision_score(all_targets, all_predictions, average=metric)
-        recall = precision_score(all_targets, all_predictions, average=metric)
+        recall = recall_score(all_targets, all_predictions, average=metric)
         f1 = f1_score(all_targets, all_predictions, average=metric)
         print(f'{metric} precision: {precision}')
         print(f'{metric} recall: {recall}')
