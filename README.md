@@ -6,9 +6,9 @@ Classification uses an encoder model for two different tasks
   * The test set is from: https://huggingface.co/datasets/SetFit/sst2 (This is a smaller version of the dataset but it has about 95% the same test set - the larger set has the test labels hidden. The remaining ~5% of examples are NOT present in the train or development set, so they are safe to use (discussed with and cleared by professor during class))
 * Multi-class (fine-grained) classification - SST-5 dataset: https://huggingface.co/datasets/SetFit/sst5
 
-To run the classification task, you can run the classification.py file.
+To run the classification task, you can run the classification.py file to train a model.
 
-When running, it will train a file and make plots of relevant accuracy and F1 metrics at the end.
+When running, it will train a model and make plots of relevant accuracy and F1 metrics at the end.
 At the end of training, a csv with relevant training/development metrics will be saved to /df_outputs that can be used to do more advanced plotting and analysis.
 Also at the end of training, the trained model will be saved to /models.
 
@@ -44,4 +44,6 @@ These are the command line arguments you can use:
 * Traditional/Binary:
   * `python classification.py --model TRADITIONAL --task BINARY`
 * Traditional/Multi-class:
-  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --epochs 40`
+  * `python classification.py --model TRADITIONAL --task MULTICLASS --epochs 40`
+
+Epochs take a long time to run, so if you want to quickly see a plot you can just use `--epochs 2` to see the end result, although it won't be fully trained

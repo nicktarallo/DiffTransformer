@@ -5,8 +5,8 @@ import torch
 import random
 from utils import *
 from sklearn.metrics import f1_score, precision_score, recall_score
-from differential_encoder import DiffTransformer
 from traditional_encoder import Transformer
+from differential_encoder import DiffTransformer
 import torch.nn as nn
 from torch import optim
 import matplotlib.pyplot as plt
