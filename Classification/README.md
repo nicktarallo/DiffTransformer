@@ -5,10 +5,10 @@ The classification compares a differential and traditional encoder transformer f
 * __Multi-class (fine-grained) classification__: SST-5 dataset: https://huggingface.co/datasets/SetFit/sst5
 
 ## Installation
-Libraries required: numpy, pandas, matplotlib, datasets, torch.
+Libraries required: numpy, pandas, matplotlib, datasets, torch, scikit-learn.
 If you do not have them, please run
 ```bash
-pip install numpy pandas matplotlib datasets torch
+pip install numpy pandas matplotlib datasets torch scikit-learn
 ```
 
 ## Running the code:
