@@ -2,7 +2,7 @@
 In this project, we explore the proposed differential transformer and compare it to traditional transformers.
 
 ## Required Libraries:
-`numpy, matplotlib, pandas, torch, datasets, sacrebleu, transformers, tqdm`
+`numpy, matplotlib, pandas, torch, datasets, sacrebleu, transformers, tqdm, scikit-learn`
 
 ## Tasks
 We compared differential transformers and traditional transformers on three different tasks. Each task has its own directory with a README containing specific instructions for running the implementation for a specific task.
