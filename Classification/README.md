@@ -57,19 +57,53 @@ These are the command line arguments you can use:
   * Use this flag with no arguments when you want to save example attention maps to the /maps folder
 
 ### Recommended commands to run for classification for testing (Remember to enter /Classification directory first):
-* Differential/Binary:
+* __Differential/Binary__:
   * `python classification.py --model DIFFERENTIAL --task BINARY --run_on_test`
-* Differential/Multi-class:
-  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --epochs 40 --run_on_test`
-* Traditional/Binary:
+* __Differential/Multi-class__:
+  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --epochs 60 --num_heads 8 --run_on_test`
+* __Traditional/Binary__:
   * `python classification.py --model TRADITIONAL --task BINARY --num_heads 2 --run_on_test`
-* Traditional/Multi-class:
-  * `python classification.py --model TRADITIONAL --task MULTICLASS --num_heads 2 --epochs 40 --run_on_test`
+* __Traditional/Multi-class__:
+  * `python classification.py --model TRADITIONAL --task MULTICLASS --epochs 60 --num_heads 16 --run_on_test`
 
-Epochs take a long time to run, so if you want to quickly see a plot you can just use `--epochs 2` to see the end result, although it won't be fully trained
+Epochs take a long time to run, so if you want to quickly see a plot you can just use `--epochs 2` to see the end result
 
 
 ## Outputs:
 * Validation metrics will be outputted to the console at the end of training
 * Test metrics will be outputted to the console if the --run_on_test flag is used
 * Plots of accuracy and F1 will also be output
+
+## Commands for replication of exact configurations from report (some of these will take a long time to train):
+* __B1:__
+  * __a:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task BINARY --num_heads 2 --run_on_test`
+  * __b:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 2 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task BINARY --num_heads 4 --run_on_test`
+  * __c:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 4 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task BINARY --num_heads 8 --run_on_test`
+  * __d:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 8 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task BINARY --num_heads 16 --run_on_test`
+* __M1:
+  * __a:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task MULTICLASS --hidden_size 500 --epochs 100 --num_heads 1 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task MULTICLASS --hidden_size 500 --epochs 100 --num_heads 2 --run_on_test`
+  * __b:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task MULTICLASS --hidden_size 500 --epochs 55 --num_heads 2 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task MULTICLASS --hidden_size 500 --epochs 55 --num_heads 4 --run_on_test`
+  * __c:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task MULTICLASS --hidden_size 500 --epochs 50 --num_heads 4 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task MULTICLASS --hidden_size 500 --epochs 50 --num_heads 8 --run_on_test`
+  * __d:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task MULTICLASS --hidden_size 500 --epochs 45 --num_heads 8 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task MULTICLASS --hidden_size 500 --epochs 45 --num_heads 16 --run_on_test`
+* __M2:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task MULTICLASS --hidden_size 100 --epochs 60 --num_heads 8 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task MULTICLASS --hidden_size 100 --epochs 60 --num_heads 16 --run_on_test`
+* __M3:__
+    * __Differential__: `python classification.py --model DIFFERENTIAL --task MULTICLASS --hidden_size 500 --epochs 30 --num_heads 8 --transformer_layers 2 --run_on_test`
+    * __Traditional__: `python classification.py --model TRADITIONAL --task MULTICLASS --hidden_size 500 --epochs 30 --num_heads 16 --transformer_layers 2 --run_on_test`
