@@ -87,7 +87,7 @@ You can also just exclude all the additional parameters and just run on a basic 
 * Test metrics will be outputted to the console if the --run_on_test flag is used
 * Plots of accuracy and F1 will also be output
 
-## Commands for replication of exact configurations from report (some of these will take a long time to train):
+## Commands for replication of all exact configurations from the report (some of these will take a long time to train):
 * __B1:__
   * __a:__
     * __Differential__: `python classification.py --model DIFFERENTIAL --task BINARY --num_heads 1 --run_on_test`
