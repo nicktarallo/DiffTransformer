@@ -1,4 +1,3 @@
-import json
 import os
 import random
 import time
@@ -11,6 +10,7 @@ from math import sqrt
 
 from torch.utils.data import DataLoader, random_split
 from datasets import load_dataset
+import numpy as np
 
 MAX_SEQ_LENGTH = 512
 BATCH_SIZE = 32
@@ -68,6 +68,9 @@ class OutputHead(nn.Module):
     
 
 def validate(model, val_dataloader, criterion, device):
+    # validation loop
+
+    # Set model to evaluation mode
     model.eval()
     total_val_loss = 0
     with torch.no_grad():
@@ -86,7 +89,9 @@ def validate(model, val_dataloader, criterion, device):
 
 
 
+
 def plot_training_progress(train_losses, val_losses, epochs_seen, folder_name):
+    # plotting traning and validation losses
     plt.switch_backend('agg')
     fig, (ax1) = plt.subplots(1, 1, figsize=(12, 4))
     # fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(12, 4))
@@ -116,16 +121,20 @@ def plot_training_progress(train_losses, val_losses, epochs_seen, folder_name):
 
 
 def text_to_token_ids(text, tokenizer):
+    # Encode text to token ids
     encoded = tokenizer.encode(text)
     encoded_tensor = torch.tensor(encoded).unsqueeze(0)
     return encoded_tensor
 
 def token_ids_to_text(token_ids, tokenizer):
+    # Decode token ids to text
     flat = token_ids.squeeze(0)
     return tokenizer.decode(flat.tolist())
 
 
 def generate_text_simple(model, idx, max_new_tokens, context_size):
+    """Generate text with top-k sampling and temperature scaling"""
+
     model.eval()
     actual_context_size = min(context_size, model.max_seq_len)
     pad_token_id = model.embed.padding_idx
@@ -237,85 +246,6 @@ def create_needle_context(num_needles=4, context_length=500):
     
     return " ".join(context), target_city, target_number
 
-
-
-def analyze_attention_scores(model, tokenizer, epoch, num_samples=50, context_length=124, folder_name='diff_attn_maps'):
-    model.eval()
-    attention_analysis = {
-        'answer_span_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
-        'noise_context_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
-    }
-
-    depths = [0.0, 0.25, 0.5, 0.75]
-    context_len_for_analysis = context_length//3
-    for _ in range(num_samples):
-        # Create context with target at specified depth (only once per sample)
-        context, target_city, target_number = create_needle_context(
-            num_needles=4,  # Fixed number of needles
-            context_length=context_len_for_analysis
-        )
-        
-        query = f"What is the magic number for {target_city}?"
-        
-        # Get attention maps (only once per sample)
-        attention_maps = get_attention_maps(model, tokenizer, context, query)
-        attention_map = attention_maps[-1][0].cpu()  # Use last layer
-        
-        # Find target needle span (same across all depths for this sample)
-        target_needle = f"The magic number for {target_city} is {target_number}"
-        target_tokens = tokenizer.convert_ids_to_tokens(
-            tokenizer(target_needle)['input_ids']
-        )
-        
-        # Calculate attention scores for each depth
-        for depth in depths:
-            # Calculate target position based on depth
-            target_pos = int(depth * context_length)
-            target_end = target_pos + len(target_tokens)
-            
-            # Calculate normalized attention scores
-            # 1. Answer span attention
-            answer_attention = attention_map[:, target_pos:target_end].mean().item()
-            
-            # 2. Noise context attention (everything except answer span)
-            noise_mask = torch.ones_like(attention_map)
-            noise_mask[:, target_pos:target_end] = 0
-            noise_attention = (attention_map * noise_mask).mean().item()
-            
-            # Store normalized scores for each depth
-            attention_analysis['answer_span_scores_per_depth'][depth].append(answer_attention)
-            attention_analysis['noise_context_scores_per_depth'][depth].append(noise_attention)
-    
-    # Calculate average scores per depth
-    avg_answer_attention_per_depth = {
-        depth: sum(scores) / len(scores) 
-        for depth, scores in attention_analysis['answer_span_scores_per_depth'].items()
-    }
-    avg_noise_attention_per_depth = {
-        depth: sum(scores) / len(scores) 
-        for depth, scores in attention_analysis['noise_context_scores_per_depth'].items()
-    }
-    
-    attention_ratio_per_depth = {
-        depth: avg_answer_attention_per_depth[depth] / avg_noise_attention_per_depth[depth]
-        for depth in depths
-    }
-
-    results = {
-        'avg_answer_attention_per_depth': avg_answer_attention_per_depth,
-        'avg_noise_attention_per_depth': avg_noise_attention_per_depth,
-        'attention_ratio_per_depth': attention_ratio_per_depth,
-        'individual_answer_attention_per_depth': attention_analysis['answer_span_scores_per_depth'],
-        'individual_noise_attention_per_depth': attention_analysis['noise_context_scores_per_depth'],
-    }
-
-    # Save results to a JSON file
-    timestamp = time.strftime("%Y%m%d-%H%M%S")
-    filename = f'{folder_name}/target_attention_{timestamp}_epoch_{epoch}.json'
-    with open(filename, 'w') as f:
-        json.dump(results, f)
-    
-    return results
 
 
 

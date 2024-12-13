@@ -1,17 +1,16 @@
+import json
+import time
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
 from math import sqrt
-from datasets import load_dataset
 from tqdm import tqdm
 import os
-from torch.utils.data import DataLoader
-from torch.utils.data import random_split
 
-from utils import MAX_SEQ_LENGTH, collate_fn, prepare_data, \
-    process_dataset, setup_tokenizer, validate, \
+from utils import MAX_SEQ_LENGTH, create_needle_context, prepare_data, \
+    setup_tokenizer, validate, \
         plot_attention_analysis, plot_training_progress \
-            ,generate_and_print_sample, analyze_attention_scores \
+            ,generate_and_print_sample \
                 ,OutputHead, FeedForward, SimpleRMSNorm
         
 
@@ -276,9 +275,89 @@ def get_attention_maps(model, tokenizer, context, query):
     norm_atn = normalize_attention_maps(attention_maps)
     return norm_atn
 
-  
 
-def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning_rate=1e-4):
+def analyze_attention_scores(model, tokenizer, epoch, num_samples=50, context_length=124, folder_name='diff_attn_maps'):
+    model.eval()
+    attention_analysis = {
+        'answer_span_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
+        'noise_context_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
+    }
+
+    depths = [0.0, 0.25, 0.5, 0.75]
+    context_len_for_analysis = context_length//4
+    for _ in range(num_samples):
+        # Create context with target at specified depth (only once per sample)
+        context, target_city, target_number = create_needle_context(
+            num_needles=4,  # Fixed number of needles
+            context_length=context_len_for_analysis
+        )
+        
+        query = f"What is the magic number for {target_city}?"
+        
+        # Get attention maps (only once per sample)
+        attention_maps = get_attention_maps(model, tokenizer, context, query)
+        attention_map = attention_maps[-1][0].cpu()  # Use last layer
+        
+        # Find target needle span (same across all depths for this sample)
+        target_needle = f"The magic number for {target_city} is {target_number}"
+        target_tokens = tokenizer.convert_ids_to_tokens(
+            tokenizer(target_needle)['input_ids']
+        )
+        
+        # Calculate attention scores for each depth
+        for depth in depths:
+            # Calculate target position based on depth
+            target_pos = int(depth * context_len_for_analysis)
+            target_end = target_pos + len(target_tokens)
+            
+            # Calculate normalized attention scores
+            # 1. Answer span attention
+            answer_attention = attention_map[:, target_pos:target_end].mean().item()
+            
+            # 2. Noise context attention (everything except answer span)
+            noise_mask = torch.ones_like(attention_map)
+            noise_mask[:, target_pos:target_end] = 0
+            noise_attention = (attention_map * noise_mask).mean().item()
+            
+            # Store normalized scores for each depth
+            attention_analysis['answer_span_scores_per_depth'][depth].append(answer_attention)
+            attention_analysis['noise_context_scores_per_depth'][depth].append(noise_attention)
+    
+    # Calculate average scores per depth
+    avg_answer_attention_per_depth = {
+        depth: sum(scores) / len(scores) 
+        for depth, scores in attention_analysis['answer_span_scores_per_depth'].items()
+    }
+    avg_noise_attention_per_depth = {
+        depth: sum(scores) / len(scores) 
+        for depth, scores in attention_analysis['noise_context_scores_per_depth'].items()
+    }
+    
+    attention_ratio_per_depth = {
+        depth: avg_answer_attention_per_depth[depth] / avg_noise_attention_per_depth[depth]
+        for depth in depths
+    }
+
+    results = {
+        'avg_answer_attention_per_depth': avg_answer_attention_per_depth,
+        'avg_noise_attention_per_depth': avg_noise_attention_per_depth,
+        'attention_ratio_per_depth': attention_ratio_per_depth,
+        'individual_answer_attention_per_depth': attention_analysis['answer_span_scores_per_depth'],
+        'individual_noise_attention_per_depth': attention_analysis['noise_context_scores_per_depth'],
+    }
+
+    # Save results to a JSON file
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    filename = f'{folder_name}/target_attention_{timestamp}_epoch_{epoch}.json'
+    with open(filename, 'w') as f:
+        json.dump(results, f)
+    
+    return results
+
+
+
+
+def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning_rate=1e-4, tokenizer=None):    
     model.train()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, reduction='mean').to(device)
@@ -328,8 +407,7 @@ def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
-
-           
+          
             epoch_loss += loss.item()
             epoch_tokens += input_ids.numel()
         
@@ -354,7 +432,7 @@ def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning
                 )
             plot_attention_analysis(persisted_attn_results, epoch, 'diff_attn_maps')
             # Plot progress and generate sample
-            plot_training_progress(train_losses, val_losses, epochs_seen, tokens_seen, 'diff_plots')
+            plot_training_progress(train_losses, val_losses, epochs_seen, 'diff_plots')
         # Save training progress plot
         # Save checkpoint if best validation loss
         if val_loss < best_val_loss:
@@ -386,7 +464,7 @@ if __name__ == "__main__":
     train_dataloader, val_dataloader = prepare_data(
         dataset_name="wikitext",
         dataset_split="wikitext-2-raw-v1",
-        split="train[:5%]"
+        split="train",
     )
 
     # Hyperparameter optimization
@@ -411,7 +489,8 @@ if __name__ == "__main__":
             train_dataloader=train_dataloader,
             val_dataloader=val_dataloader,
             num_epochs=20,
-            learning_rate=1e-4
+            learning_rate=1e-4,
+            tokenizer=tokenizer
         )
 
         torch.save(trained_model.state_dict(), 'diff_final_model.pt')

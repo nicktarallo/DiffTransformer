@@ -1,31 +1,32 @@
+import json
+import time
 import torch
 import torch.nn.functional as F
 from torch import nn, Tensor
 from math import sqrt
-from datasets import load_dataset
 from tqdm import tqdm
 import os
-from torch.utils.data import DataLoader
-from torch.utils.data import random_split
+from torch.amp import GradScaler, autocast
 
 
-from utils import collate_fn, prepare_data, \
-    process_dataset, setup_tokenizer, validate, \
+
+from utils import create_needle_context, prepare_data, \
+        setup_tokenizer, validate, \
         plot_attention_analysis, plot_training_progress \
-            ,generate_and_print_sample, analyze_attention_scores \
+            ,generate_and_print_sample\
                 ,OutputHead, FeedForward, SimpleRMSNorm, MAX_SEQ_LENGTH
    
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # device = torch.device('xla')
 
-
-
-
-
-
+# Initialize GradScaler
+scaler = GradScaler("cuda" if torch.cuda.is_available() else "cpu")
 
 class Attention(nn.Module):
+    """
+    Attention module
+    """
     def __init__(self, d: int, embedding_dim: int):
         super(Attention, self).__init__()
         self.d = d
@@ -56,7 +57,11 @@ class Attention(nn.Module):
 
         return torch.matmul(A, V)
 
+
 class MultiHeadAttention(nn.Module):
+    """
+    Multi-Head Attention module.
+    """
     def __init__(self, h: int, d_head: int, embedding_dim: int):
         super(MultiHeadAttention, self).__init__()
         self.h = h
@@ -81,7 +86,7 @@ class TransformerBlock(nn.Module):
 
         self.attn = MultiHeadAttention(heads, head_dim, d_model)
         self.ffn = FeedForward(d_model, d_model * 4, dropout)
-        self.norm = SimpleRMSNorm(d_model)
+        self.norm = nn.LayerNorm(d_model)
 
     def forward(self, x: Tensor, mask: Tensor = None) -> Tensor:
         results = self.attn(self.norm(x), mask) + x
@@ -90,7 +95,7 @@ class TransformerBlock(nn.Module):
     
 class DecoderTransformer(nn.Module):
     """
-    Implements a full Differential Transformer.
+    Implements a full Transformer.
     """
     def __init__(self, d_model: int = 3072, n_heads: int = 12, d_head:int = 2, dropout: float = 0.1, lambda_init: float = 0.8, n_layers: int = 24, vocab_size: int = 30000, max_seq_len: int = 128, padding_idx: int = None, tokenizer=None):
         super(DecoderTransformer, self).__init__()
@@ -112,13 +117,13 @@ class DecoderTransformer(nn.Module):
         # Layer initialization
         self.layers = nn.ModuleList([TransformerBlock(self.d_model, self.heads, self.dropout) for _ in range(self.n_layers)])
         self.embed = nn.Embedding(num_embeddings=self.vocab_size, embedding_dim=self.d_model, padding_idx=padding_idx)
-        self.norm = SimpleRMSNorm(self.d_model)
+        self.norm = nn.LayerNorm(self.d_model)
         self.output_head = OutputHead(self.d_model, vocab_size)
       
     def forward(self, input_ids: Tensor, mask: Tensor = None) -> Tensor:
         seq_len = min(input_ids.size(1), self.max_seq_len)
         positions = torch.arange(0, seq_len, dtype=torch.long, device=input_ids.device)
-        x = self.embed(input_ids) + self.position_embedding(positions)
+        x = self.embed(input_ids) + self.position_embedding(positions)* sqrt(self.d_model)
         x = self.dropout_layer(x)
         
         # Create default attention mask if none provided
@@ -208,8 +213,88 @@ def get_attention_maps(model, tokenizer, context, query):
 
 
 
+def analyze_attention_scores(model, tokenizer, epoch, num_samples=50, context_length=124, folder_name='diff_attn_maps'):
+    model.eval()
+    attention_analysis = {
+        'answer_span_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
+        'noise_context_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
+    }
 
-def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning_rate=1e-4):
+    depths = [0.0, 0.25, 0.5, 0.75]
+    context_len_for_analysis = context_length//4
+    for _ in range(num_samples):
+        # Create context with target at specified depth (only once per sample)
+        context, target_city, target_number = create_needle_context(
+            num_needles=4,  # Fixed number of needles
+            context_length=context_len_for_analysis
+        )
+        
+        query = f"What is the magic number for {target_city}?"
+        
+        # Get attention maps (only once per sample)
+        attention_maps = get_attention_maps(model, tokenizer, context, query)
+        attention_map = attention_maps[-1][0].cpu()  # Use last layer
+        
+        # Find target needle span (same across all depths for this sample)
+        target_needle = f"The magic number for {target_city} is {target_number}"
+        target_tokens = tokenizer.convert_ids_to_tokens(
+            tokenizer(target_needle)['input_ids']
+        )
+        
+        # Calculate attention scores for each depth
+        for depth in depths:
+            # Calculate target position based on depth
+            target_pos = int(depth * context_len_for_analysis)
+            target_end = target_pos + len(target_tokens)
+            
+            # Calculate normalized attention scores
+            # 1. Answer span attention
+            answer_attention = attention_map[:, target_pos:target_end].mean().item()
+            
+            # 2. Noise context attention (everything except answer span)
+            noise_mask = torch.ones_like(attention_map)
+            noise_mask[:, target_pos:target_end] = 0
+            noise_attention = (attention_map * noise_mask).mean().item()
+            
+            # Store normalized scores for each depth
+            attention_analysis['answer_span_scores_per_depth'][depth].append(answer_attention)
+            attention_analysis['noise_context_scores_per_depth'][depth].append(noise_attention)
+    
+    # Calculate average scores per depth
+    avg_answer_attention_per_depth = {
+        depth: sum(scores) / len(scores) 
+        for depth, scores in attention_analysis['answer_span_scores_per_depth'].items()
+    }
+    avg_noise_attention_per_depth = {
+        depth: sum(scores) / len(scores) 
+        for depth, scores in attention_analysis['noise_context_scores_per_depth'].items()
+    }
+    
+    attention_ratio_per_depth = {
+        depth: avg_answer_attention_per_depth[depth] / avg_noise_attention_per_depth[depth]
+        for depth in depths
+    }
+
+    results = {
+        'avg_answer_attention_per_depth': avg_answer_attention_per_depth,
+        'avg_noise_attention_per_depth': avg_noise_attention_per_depth,
+        'attention_ratio_per_depth': attention_ratio_per_depth,
+        'individual_answer_attention_per_depth': attention_analysis['answer_span_scores_per_depth'],
+        'individual_noise_attention_per_depth': attention_analysis['noise_context_scores_per_depth'],
+    }
+
+    # Save results to a JSON file
+    timestamp = time.strftime("%Y%m%d-%H%M%S")
+    filename = f'{folder_name}/target_attention_{timestamp}_epoch_{epoch}.json'
+    with open(filename, 'w') as f:
+        json.dump(results, f)
+    
+    return results
+
+
+
+
+def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning_rate=1e-4, tokenizer=None):
     model.train()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, reduction='mean').to(device)
@@ -241,23 +326,36 @@ def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning
             target_ids = input_ids[:, 1:].to(device)
             
             optimizer.zero_grad(set_to_none=True)
-            logits = model(input_ids[:, :-1], mask=attention_mask[:, :-1])
-            if torch.isnan(logits).any():
-                print(f"NaN detected in logits. Shape: {logits.shape}")
-                continue
+            batch_size, seq_len, vocab_size = (0,0,0)
+            with autocast("cuda" if torch.cuda.is_available() else "cpu"):
+                logits = model(input_ids[:, :-1], mask=attention_mask[:, :-1])
+                batch_size, seq_len, vocab_size = logits.shape
+                if torch.isnan(logits).any():
+                    print(f"NaN detected in logits. Shape: {logits.shape}")
+                    continue
+                logits = logits.reshape(-1, logits.size(-1))
+                target_ids = target_ids.reshape(-1)
+                loss = criterion(logits, target_ids)
+            # logits = model(input_ids[:, :-1], mask=attention_mask[:, :-1])
             # Reshape logits and targets properly
-            batch_size, seq_len, vocab_size = logits.shape
-            logits = logits.reshape(-1, vocab_size)
+            # logits = logits.reshape(-1, vocab_size)
             
-            target_ids = target_ids.reshape(-1)
-            loss = criterion(logits, target_ids)
+            # target_ids = target_ids.reshape(-1)
+            # loss = criterion(logits, target_ids)
             if torch.isnan(loss):
                 print(f"NaN loss detected. Logits min/max: {logits.min():.4f}/{logits.max():.4f}")
-            loss.backward()
+            
+            # Scale the loss and backpropagate
+            scaler.scale(loss).backward()
+            # loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-            optimizer.step()
+            # optimizer.step()
+            # Step optimizer with scaled gradients
+            scaler.step(optimizer)
+            scaler.update()
             epoch_loss += loss.item()
             epoch_tokens += input_ids.numel()
+
         
         avg_train_loss = epoch_loss / len(train_dataloader)
         val_loss = validate(model, val_dataloader, criterion, device)
@@ -282,7 +380,7 @@ def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning
             plot_attention_analysis(persisted_attn_results, epoch, folder_name='attn_maps')
            
             # Plot progress and generate sample
-            plot_training_progress(train_losses, val_losses, epochs_seen, tokens_seen, folder_name='plots')
+            plot_training_progress(train_losses, val_losses, epochs_seen, folder_name='plots')
         # Save training progress plot
         # Save checkpoint if best validation loss
         if val_loss < best_val_loss:
@@ -316,7 +414,7 @@ if __name__ == "__main__":
     train_dataloader, val_dataloader = prepare_data(
         dataset_name="wikitext",
         dataset_split="wikitext-2-raw-v1",
-        split = "train[:5%]"
+        split = "train"
     )
 
     # Hyperparameter optimization
@@ -341,7 +439,8 @@ if __name__ == "__main__":
             train_dataloader=train_dataloader,
             val_dataloader=val_dataloader,
             num_epochs=20,
-            learning_rate=1e-4
+            learning_rate=1e-4,
+            tokenizer=tokenizer
         )
 
         torch.save(trained_model.state_dict(), 'final_model.pt')

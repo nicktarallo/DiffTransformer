@@ -22,7 +22,7 @@ To run this code, you need Python 3.x and the following dependencies:
 
 ```bash
 cd answer-noise-ratio
-pip install torch datasets transformers matplotlib tqdm
+pip install torch datasets transformers matplotlib tqdm numpy
 
 # for running the differntial attention decoder transformer
 python decoder_differential_attention.py
