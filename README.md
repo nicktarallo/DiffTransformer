@@ -24,3 +24,6 @@ We compared differential transformers and traditional transformers on three diff
   * `cd answer-noise-ratio`
 
 Please navigate to the desired folder using `cd` and read the README.md file in that directory to run the code!
+
+### Video
+Our video is available at: https://youtu.be/6HB5rx9I5Ws
