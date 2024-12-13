@@ -122,7 +122,7 @@ class MultiHeadDifferentialAttention(nn.Module):
 
 class DifferentialTransformerBlock(nn.Module):
     """
-    Implements a Differential Transformer Block.
+    Implements a Differential Transformer layer.
     """
     def __init__(self, d_model: int, heads: int = 12, dropout: float = 0.1, lambda_init: float = 0.05):
         super(DifferentialTransformerBlock, self).__init__()
@@ -209,8 +209,6 @@ def get_attention_maps(model, tokenizer, context, query):
     """
     Get attention maps for a given context and query.
     """
-
-
     # Set model to evaluation mode
     model.eval()
 
@@ -277,6 +275,9 @@ def get_attention_maps(model, tokenizer, context, query):
 
 
 def analyze_attention_scores(model, tokenizer, epoch, num_samples=50, context_length=124, folder_name='diff_attn_maps'):
+    '''
+    Analyze attention scores for target needle span and noise context.
+    '''
     model.eval()
     attention_analysis = {
         'answer_span_scores_per_depth': {depth: [] for depth in [0.0, 0.25, 0.5, 0.75]},
@@ -357,7 +358,10 @@ def analyze_attention_scores(model, tokenizer, epoch, num_samples=50, context_le
 
 
 
-def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning_rate=1e-4, tokenizer=None):    
+def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning_rate=1e-4, tokenizer=None):   
+    '''
+    the training loop for the differential transformer model
+    ''' 
     model.train()
     optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
     criterion = nn.CrossEntropyLoss(ignore_index=tokenizer.pad_token_id, reduction='mean').to(device)
@@ -456,6 +460,10 @@ def train_model(model, train_dataloader, val_dataloader, num_epochs=20, learning
     return model, train_losses, val_losses
 
 if __name__ == "__main__":
+    '''
+    Starting point for the model.
+    Declaring model, optimizer, loss function and training loop.
+    '''
     print(f"Using device: {device}")
     print("Loading dataset and tokenizer...")
 
