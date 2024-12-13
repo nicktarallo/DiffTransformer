@@ -13,6 +13,11 @@ pip install numpy pandas matplotlib datasets torch scikit-learn
 
 ## Running the code:
 To run the classification task, you can run the classification.py file to train a model.
+
+When running, it will train a model and make plots of relevant accuracy and F1 metrics at the end.
+At the end of training, a csv with relevant training/development metrics will be saved to /df_outputs that can be used to do more advanced plotting and analysis.
+Also at the end of training, the trained model will be saved to /models.
+
 Prior to running the command, be sure to be in the Classification directory. If you are not, do
 
 ```bash
@@ -20,10 +25,6 @@ cd Classification
 ```
 
 within the larger project directory.
-
-When running, it will train a model and make plots of relevant accuracy and F1 metrics at the end.
-At the end of training, a csv with relevant training/development metrics will be saved to /df_outputs that can be used to do more advanced plotting and analysis.
-Also at the end of training, the trained model will be saved to /models.
 
 The basic way to run the program is with
 ```bash
@@ -55,7 +56,7 @@ These are the command line arguments you can use:
 * __--get_attention_maps__ (default is False)
   * Use this flag with no arguments when you want to save example attention maps to the /maps folder
 
-### Recommended commands to run for classification to fully train (Remember to enter /Classification directory first):
+### Recommended commands to run for classification for testing (Remember to enter /Classification directory first):
 * Differential/Binary:
   * `python classification.py --model DIFFERENTIAL --task BINARY --run_on_test`
 * Differential/Multi-class:
