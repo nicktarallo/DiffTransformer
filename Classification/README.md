@@ -30,7 +30,7 @@ The basic way to run the program is with
 ```bash
 python classification.py
 ```
-which will train a single head, differential transformer on binary classification for 25 epochs.
+which will train a single-head differential transformer on binary classification for 25 epochs.
 
 These are the command line arguments you can use:
 * __--model DIFFERENTIAL__ or __--model TRADITIONAL__ (default is DIFFERENTIAL)
@@ -66,7 +66,20 @@ These are the command line arguments you can use:
 * __Traditional/Multi-class__:
   * `python classification.py --model TRADITIONAL --task MULTICLASS --epochs 60 --num_heads 16 --run_on_test`
 
+In these four examples, the binary tasks are running on config B1-a from our report and the multi-class configs are running on config M2
+
 Epochs take a long time to run, so if you want to quickly see a plot you can just use `--epochs 2` to see the end result
+
+You can also just exclude all the additional parameters and just run on a basic 1 head, 1 layer, 100 FFNN size, and 25 epochs with these commands that will train faster:
+
+* __Differential/Binary__:
+  * `python classification.py --model DIFFERENTIAL --task BINARY --run_on_test`
+* __Differential/Multi-class__:
+  * `python classification.py --model DIFFERENTIAL --task MULTICLASS --run_on_test`
+* __Traditional/Binary__:
+  * `python classification.py --model TRADITIONAL --task BINARY --run_on_test`
+* __Traditional/Multi-class__:
+  * `python classification.py --model TRADITIONAL --task MULTICLASS --run_on_test`
 
 
 ## Outputs:
